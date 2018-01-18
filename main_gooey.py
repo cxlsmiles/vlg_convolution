@@ -14,9 +14,10 @@ from gooey import GooeyParser
 def main():    
     parser = GooeyParser(description = "My cool app!")
     parser.add_argument('Filename', help = "file with stick spectrum", widget = 'FileChooser')
+    parser.add_argument("Save", help = "the convolved function to be saved (LVG)")
     parser.add_argument("Gamma", help = "decay width in eV, parameter of the Lorentzian")
     parser.add_argument("Alpha", help = "gaussian broadening in eV, parameter of the Gaussian")
-    parser.add_argument("Interval", help = "")
+    parser.add_argument("Interval", help = "interval in x by which the grid for the convolution is extended")
     parser.add_argument("Npoints", help = "number of points of the grid of the convolution")
     
     args = parser.parse_args()
@@ -31,6 +32,7 @@ def main():
     alpha = float(args.Alpha)
     dx = float(args.Interval)
     npoints = int(args.Npoints)
+    tosave = args.Save
 
     file = (args.Filename).split("\\")[-1]
 
@@ -44,10 +46,18 @@ def main():
     tot_v = convolve(gamma, alpha, e, f_e, grid, npoints, "V")
     tot_g = convolve(gamma, alpha, e, f_e, grid, npoints, "G")
 
-    ofile = open('conv.%s' % file, 'w')
-    for i in range(npoints):
-        ofile.write("%15.10f  %15.10f\n" % (grid[i], tot_v[i]))
-    ofile.close()
+    dict_lvg = {"L": tot_l,
+                "G": tot_g,
+                "V": tot_v}
+
+    for s in range(len(tosave)):
+        ofile = open('conv.%s.%s' % (tosave[s], file), 'w')
+
+        arr = dict_lvg[tosave[s]]
+        for i in range(npoints):
+            ofile.write("%15.10f  %20.15e\n" % (grid[i], arr[i]))
+        ofile.close()
+
 
     plt.plot(grid, tot_l)
     plt.plot(grid, tot_v)
