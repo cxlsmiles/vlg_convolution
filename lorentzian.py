@@ -6,7 +6,7 @@ import sys
 #
 ##===============================
 
-class Lorentzian:
+class lorentzian:
     def __init__(self, gamma, E0):
         self.gamma = gamma
         self.E0 = E0
@@ -17,7 +17,7 @@ class Lorentzian:
     def __call__(self, E):
          return 0.5 * self.gamma / ((E - self.E0)**2 + 0.25 * self.gamma**2)/np.pi
 
-def Convolve (f, g, xgrid):
+def convolve (f, g, xgrid):
     n = len(f)
     conv = np.zeros(n)
     dx = abs(xgrid[1] - xgrid[0])
@@ -27,4 +27,3 @@ def Convolve (f, g, xgrid):
             temp += f[j] * g[xgrid[i] - xgrid[j]]
         conv[i] = temp * dx
     return conv
-

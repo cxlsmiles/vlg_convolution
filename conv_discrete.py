@@ -1,41 +1,32 @@
+# Functions needed to go the convolution
 import numpy as np
-import sys
 from lorentzian import *
+from gaussian import *
+from voigt import *
 
 
-try:
-   file = sys.argv[1]
-   Gamma = float(sys.argv[2])
-   dx = float(sys.argv[3])
-   npoints = int(sys.argv[4])
-except IndexError:
-   print "usage: %s [filename] [Gamma in EV!!!] [dx] [npoints]" % sys.argv[0]
-   sys.exit(1)
+# Need to change this, this implementation is not very good
+
+def convolve (gam, alph, x, fx, x_cont, np_, type):
+    n = len(fx)
+
+    funcs = []
+    if type == "L":
+        for i in range(n):
+            fi = lorentzian(gam, x[i])
+            funcs.append(fi(x_cont)*fx[i])
+    elif type == "G":
+        for i in range(n):
+            fi = gaussian(alph, x[i])
+            funcs.append(fi(x_cont)*fx[i])
+    elif type == "V":
+        for i in range(n):
+            fi = voigt(gam, alph, x[i])
+            funcs.append(fi(x_cont)*fx[i])
 
 
-ifile = open(file, 'r')
-lns = ifile.readlines()
-ifile.close()
+    sum_funcs = np.zeros(np_)
+    for i in range(n):
+         sum_funcs = np.sum([sum_funcs, funcs[i]], axis=0)   
 
-n = len(lns)
-E = [float(lns[i].split()[0]) for i in range(n)]
-Int = [float(lns[i].split()[1]) for i in range(n)]
-
-grid = np.linspace(E[0] - dx, E[-1] + dx, npoints)
-
-
-Lors = []
-for i in range(n):
-    Li = Lorentzian(Gamma, E[i])
-    Lors.append(Li(grid)*Int[i])
-
-
-total = np.zeros(npoints)
-for i in range(n):
-    total = np.sum([total, Lors[i]], axis=0)
-
-ofile = open('conv.%s' % file, 'w')
-for i in range(npoints):
-    ofile.write("%15.10f  %15.10f\n" % (grid[i], total[i]))
-ofile.close()
-   
+    return sum_funcs
