@@ -25,6 +25,7 @@ f_e = [float(lns[i].split()[1]) for i in range(n)]
 
 grid = np.linspace(e[0] - dx, e[-1] + dx, npoints)
 
+
 tot_l = convolve(gamma, alpha, e, f_e, grid, npoints, "L")
 tot_v = convolve(gamma, alpha, e, f_e, grid, npoints, "V")
 tot_g = convolve(gamma, alpha, e, f_e, grid, npoints, "G")
@@ -42,7 +43,12 @@ for s in range(len(tosave)):
         ofile.write("%15.10f  %20.15e\n" % (grid[i], arr[i]))
     ofile.close()
 
-plt.plot(grid, tot_l)
-plt.plot(grid, tot_v)
-plt.plot(grid, tot_g)
+
+print integrate(tot_g, grid)
+print integrate(tot_l, grid)
+print integrate(tot_v, grid)
+plt.plot(grid, tot_l, label="l")
+plt.plot(grid, tot_g, label="g")
+plt.plot(grid, tot_v, label="v")
+plt.legend()
 plt.show()
