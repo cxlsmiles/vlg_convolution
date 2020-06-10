@@ -4,6 +4,7 @@ from conv_discrete import *
 import matplotlib.pyplot as plt
 import sys
 import argparse
+import pandas as pd
 
 
 from gooey import Gooey
@@ -23,10 +24,8 @@ def main():
     args = parser.parse_args()
 
 
-    ifile = open(args.Filename, 'r')
-    lns = ifile.readlines()
-    ifile.close()
-
+    data = pd.read_csv(args.Filename, sep=" ", header=None)
+    data.columns = ["x", "fx"]
 
     gamma = float(args.Gamma)
     alpha = float(args.Alpha)
@@ -34,11 +33,9 @@ def main():
     npoints = int(args.Npoints)
     tosave = args.Save
 
-    file = (args.Filename).split("\\")[-1]
-
-    n = len(lns)
-    e = [float(lns[i].split()[0]) for i in range(n)]
-    f_e = [float(lns[i].split()[1]) for i in range(n)]
+    e = np.array(data.x)
+    f_e = np.array(data.fx)
+    n = len(e)
 
     grid = np.linspace(e[0] - dx, e[-1] + dx, npoints)
 

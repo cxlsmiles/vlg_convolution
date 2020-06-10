@@ -2,8 +2,7 @@ import numpy as np
 from gaussian import *
 from lorentzian import *
 import matplotlib.pyplot as plt
-from conv_discrete import *
-from scipy.special import wofz
+from scipy.special import voigt_profile
 
 
 class voigt:
@@ -13,73 +12,35 @@ class voigt:
         self.x0 = x0
 
 
-    def __call__(self, x_):
-        gaus = gaussian(self.alpha,self.x0)
-        g_array = gaus(x_)
+        # Source wiki: https://en.wikipedia.org/wiki/Voigt_profile
+        self.fg = self.alpha*np.sqrt(np.log(2))
+        self.fl = self.gamma
+        self.fv = 0.5346*self.fl + np.sqrt(0.2166*self.fl**2 + self.fg**2)
+
+        self.zero_interval = 8.*self.fv
+
+    def __call__(self, x):
+        sigma = self.alpha / (2. * np.sqrt(2. * np.log(2.)))
+        gamma = self.gamma/2.
+        return voigt_profile((np.array(x) - self.x0), sigma, gamma)
+
+    def _np_conv(self, x):
+        # This class member function is used only for testing
+        gaussian_profile = gaussian(self.alpha,self.x0)
+        gx = gaussian_profile(x)
     
-        lor = lorentzian(self.gamma, 0.0)
-        l_array = lor(x_)
+        lorentzian_profile = lorentzian(self.gamma, 0.0)
+        lx = lorentzian_profile(x)
         
-        v_array = np.zeros(len(x_))
-        dx = x_[1]-x_[0]
+        dx = x[1]-x[0]
 
-        for i in range(len(x_)):
-            lor = lorentzian(self.gamma, x_[i])
-            l_arr = lor(x_)
-            
-            prod = l_arr*g_array
-            v_array[i] = np.trapz(prod, x = x_, dx=dx)
-        
-        return v_array
+        return np.convolve(gx,lx, 'same')*dx
 
-    def my_conv(self, x_):
-        gaus = gaussian(self.alpha,self.x0)
-        g_array = gaus(x_)
-    
-        lor = lorentzian(self.gamma, 0.0)
-        l_array = lor(x_)
-        
-        v_array = np.zeros(len(x_))
-        dx = x_[1]-x_[0]
-
-        l_array = l_array[::-1]
-
-        for i in range(len(l_array)):
-            temp = 0.0
-            for j in range(len(l_array)):
-                temp += g_array[j]*l_array[i-j]
-            v_array[i] = temp*dx
-        return v_array
-
-    def np_conv(self, x_):
-        gaus = gaussian(self.alpha,self.x0)
-        g_array = gaus(x_)
-    
-        lor = lorentzian(self.gamma, 0.0)
-        l_array = lor(x_)
-        
-        v_array = np.zeros(len(x_))
-        dx = x_[1]-x_[0]
-
-        v_array = np.convolve(g_array,l_array, 'same')*dx
-
-        return v_array
-
-def V(x, alpha, gamma):
-    """
-    Return the Voigt line shape at x with Lorentzian component HWHM gamma
-    and Gaussian component HWHM alpha.
-
-    """
-    sigma = alpha / np.sqrt(2 * np.log(2))
-
-    return np.real(wofz((x + 1j*gamma)/sigma/np.sqrt(2))) / sigma /np.sqrt(2*np.pi)
-
-def L(x, gamma):
-    """ Return Lorentzian line shape at x with HWHM gamma """
-    return gamma / np.pi / (x**2 + gamma**2)
+    def get_zero_interval (self):
+        return self.zero_interval
 
 if __name__ == "__main__":
+
     # x = np.linspace(2800,2840,1000)
     # v = voigt(0.3,0.64,5.0)
     # v2 = voigt(0.3,0.64,0.0)
@@ -95,9 +56,35 @@ if __name__ == "__main__":
     # plt.plot(x1,v(x1))
     # plt.show()
 
-
+    import numpy as np
     alpha = 0.3/np.sqrt(2)
-    gamma = 0.62/2
+    #gamma = 0.62/2
+    gamma = 0.62
+
+    fg = alpha*np.sqrt(np.log(2))
+    fl = gamma
+
+    fv = 0.5346*fl + np.sqrt(0.2166*fl**2 + fg**2)
+
+    x = np.linspace(-5, 5, 1000)
+    v_instance = voigt(gamma, alpha, 0.0)
+    varr = v_instance(x)
+
+
+    # print(6.*fv)
+    # tmparr = np.where(x > 7.*fv)
+    # index = tmparr[0][0]
+    # print(index)
+    # print(varr[index])
+
+    import matplotlib.pyplot as plt
+
+    plt.plot(x, varr, label='fv = %5.2f' % (fv))
+    plt.plot(x, V(x, alpha, gamma))
+    plt.legend()
+    plt.show()
+
+    import sys; sys.exit(1)
     
     # x2 = np.linspace(-10,10,1000)
     # v4 = voigt(0.8,0.64,0.0)

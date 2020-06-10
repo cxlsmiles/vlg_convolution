@@ -1,54 +1,79 @@
 import numpy as np
 import sys
-from conv_discrete import *
 import matplotlib.pyplot as plt
+import pandas as pd
 
-try:
-   file = sys.argv[1]
-   gamma = float(sys.argv[2])
-   alpha = float(sys.argv[3])
-   dx = float(sys.argv[4])
-   npoints = int(sys.argv[5])
-   tosave = sys.argv[6]
-except IndexError:
-   print "usage: %s [filename] [Gamma in EV!!!] [Alpha in EV] [dx] [npoints] [LVG]" % sys.argv[0]
-   sys.exit(1)
+from conv_discrete import convolve
+from conv_continuous import convolve_continuous
+from find_duplicates import *
+from gaussian import gaussian
+from file_io import write_to_file
 
+def main (fname, functionType, gamma, alpha, npoints, is_continuous):
 
-ifile = open(file, 'r')
-lns = ifile.readlines()
-ifile.close()
+    data = pd.read_csv(fname, header=None, delim_whitespace = True)
+    data.columns = ["x", "fx"]
 
-n = len(lns)
-e = [float(lns[i].split()[0]) for i in range(n)]
-f_e = [float(lns[i].split()[1]) for i in range(n)]
+    if is_continuous:
+        x = np.array(data.x)
+        fx = np.array(data.fx)
 
-grid = np.linspace(e[0] - dx, e[-1] + dx, npoints)
+        if len(functionType) == 1:
+            convolutionOfFx = convolve_continuous(gamma, alpha, x, fx, functionType)
 
+            write_to_file(fname, functionType, x, convolutionOfFx)
+            
+            plt.plot(x, fx, '-')
+            plt.plot(x, convolutionOfFx, label=functionType)
+        else:
+            plt.plot(x, fx, '-', label='original spectrum')
+            for i in range(len(functionType)):
+                convolutionOfFx = convolve_continuous(gamma, alpha, x, fx, functionType[i])
+                
+                write_to_file(fname, functionType[i], x, convolutionOfFx)
+                
+                plt.plot(x, convolutionOfFx, label=functionType[i])
+            plt.legend()
+            plt.show()
+        
+    else:
+        x, fx = remove_duplicates(data.x, data.fx)
+        x, fx = remove_zero_intensity(x, fx)
 
-tot_l = convolve(gamma, alpha, e, f_e, grid, npoints, "L")
-tot_v = convolve(gamma, alpha, e, f_e, grid, npoints, "V")
-tot_g = convolve(gamma, alpha, e, f_e, grid, npoints, "G")
+        gauss_profile = gaussian(alpha, 0.0)
+        interval = gauss_profile.get_zero_interval()
+        xContinuous = np.linspace(x[0] - interval, x[-1] + interval, npoints)
 
+        if len(functionType) == 1:
+            convolutionOfFx = convolve(gamma, alpha, x, fx, xContinuous, functionType)
+            write_to_file(fname, functionType, xContinuous, convolutionOfFx)
 
-dict_lvg = {"L": tot_l,
-            "G": tot_g,
-            "V": tot_v}
+            plt.plot(x, fx, 'bo')
+            plt.plot(xContinuous, convolutionOfFx, label=functionType)
+        else:
+            for i in range(len(functionType)):
+                convolutionOfFx = convolve(gamma, alpha, x, fx, xContinuous, functionType[i])
+                write_to_file(fname, functionType[i], xContinuous, convolutionOfFx)
 
-for s in range(len(tosave)):
-    ofile = open('conv.%s.%s' % (tosave[s], file), 'w')
+                plt.plot(x, fx, 'bo')
+                plt.plot(xContinuous, convolutionOfFx, label=functionType[i])
+        plt.xlim([xContinuous[0], xContinuous[-1]])
+        plt.legend()
+        plt.show()
 
-    arr = dict_lvg[tosave[s]]
-    for i in range(npoints):
-        ofile.write("%15.10f  %20.15e\n" % (grid[i], arr[i]))
-    ofile.close()
+if __name__ == "__main__":
+    import sys
 
+    try:
+        fname = sys.argv[1]
+        functionType = sys.argv[2]
+        gamma = float(sys.argv[3])
+        alpha = float(sys.argv[4])
+        npoints = int(sys.argv[5])
+        is_continuous = int(sys.argv[6])
 
-print integrate(tot_g, grid)
-print integrate(tot_l, grid)
-print integrate(tot_v, grid)
-plt.plot(grid, tot_l, label="l")
-plt.plot(grid, tot_g, label="g")
-plt.plot(grid, tot_v, label="v")
-plt.legend()
-plt.show()
+    except IndexError:
+        print("usage: %s [file name] [function type - G L V] [gamma] [alpha] [npoints] [is the spectrum continuous - T/F]\n" % sys.argv[0])
+        sys.exit(0)
+
+    main(fname, functionType, gamma, alpha, npoints, is_continuous)

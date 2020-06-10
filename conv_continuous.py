@@ -1,45 +1,82 @@
+from gaussian import gaussian
+from lorentzian import lorentzian
+from voigt import voigt
 import numpy as np
-import sys
-from lorentzian import *
-##================================
-#
-#    MAIN :)
-#
-##================================
-
-try:
-   file = sys.argv[1]
-   Gamma = float(sys.argv[2])
-except IndexError:
-   print "usage: %s [filename] [Gamma]" % sys.argv[0]
-   sys.exit(1)
 
 
-#Gamma = 0.112
-Lor = Lorentzian(Gamma, 0.0)
+def convolve_continuous(alpha, gamma, x, fx, typeOfFunction):
+   npoints = len(x)
+   dx = x[1] - x[0]
 
-#npts = 10000
-#grid = np.linspace(-5.0, 5.0, npts)
-#Lx = Lor(grid)
-#
-#for i in range(npts):
-#    print "%15.10f  %15.10f" % (grid[i], Lx[i])
+   if typeOfFunction == 'G':
+      gaussian_profile = gaussian(alpha, x[int(npoints/2)])
+      gx = gaussian_profile(x)
+
+   elif typeOfFunction == 'L':
+      lorentzian_profile = lorentzian(gamma, x[int(npoints/2)])
+      gx = lorentzian_profile(x)
+
+   elif typeOfFunction == 'V':
+      voigt_profile = voigt(gamma, alpha, x[int(npoints/2)])
+      gx = voigt_profile(x)
+
+   else:
+      print('This type of function is not supported.\n')
+      import sys
+      sys.exit(0)
+
+   assert(len(gx) == len(fx))
+   
+   return np.convolve(gx, fx, mode='same')*dx
 
 
-ifile = open(file, 'r')
-lns = ifile.readlines()
-ifile.close()
+if __name__ == "__main__":
+   from scipy.special import wofz
+   import matplotlib.pyplot as plt
 
-n = len(lns)
-E = [float(lns[i].split()[0]) for i in range(n)]
-f = [float(lns[i].split()[1]) for i in range(n)]
+   # def V(x, alpha, gamma):
+   #    """
+   #    Return the Voigt line shape at x with Lorentzian component HWHM gamma
+   #    and Gaussian component HWHM alpha.
+
+   #    """
+   #    sigma = alpha / np.sqrt(2 * np.log(2))
+
+   #    return np.real(wofz((x + 1j*gamma)/sigma/np.sqrt(2))) / sigma\
+   #                                                          /np.sqrt(2*np.pi)
 
 
-fg_conv = Convolve(f, Lor, E)
+   # npoints = 10000
+   # x = np.linspace(-10, 10, npoints)
+   # alpha = 0.5
+   # gamma = 0.5
 
+   # vgt = V(x, alpha/2., gamma/2.)
 
-ofile = open("conv.%s" % file, 'w')
-for i in range(len(E)):
-    ofile.write("%10.6f  %20.10f\n" % (E[i], fg_conv[i]))
-ofile.close()
+   # conv_vgt = convolve_continuous(alpha, gamma, x, vgt, 'G')
 
+   # plt.plot(x, vgt)
+   # plt.plot(x, conv_vgt)
+   # plt.show()
+   
+   with open('sum_Auger.dat', 'r') as f:
+      lns = f.readlines()
+
+      lns = lns[790:]
+      x = []
+      fx = []
+      for i in range(len(lns)):
+         x.append(float(lns[i].split()[0]))
+         fx.append(float(lns[i].split()[1]))
+      alpha = 0.5
+      gamma = 1.0
+
+      x = np.array(x)
+      fx = np.array(fx)
+
+      plt.plot(x, fx, label='unconvolved')
+      for typeOfFunction in ['V', 'L', 'G']:
+         fx_convolved = convolve_continuous(alpha, gamma, x, fx, typeOfFunction)
+         plt.plot(x, fx_convolved, label=typeOfFunction)
+      plt.legend()
+      plt.show()

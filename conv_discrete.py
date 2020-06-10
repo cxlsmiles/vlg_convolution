@@ -1,4 +1,3 @@
-# Functions needed to go the convolution
 import numpy as np
 from lorentzian import *
 from gaussian import *
@@ -6,34 +5,25 @@ from voigt import *
 import matplotlib.pyplot as plt
 
 
-# Need to change this, this implementation is not very good
+def convolve (gamma, alpha, x, fx, xContinuous, typeOfFunction):
+    lenFx = len(fx)
 
-def convolve (gam, alph, x, fx, x_cont, np_, type):
-    n = len(fx)
+    functionValues = []
+    if typeOfFunction == "L":
+        for i in range(lenFx):
+            lorentzian_profile = lorentzian(gamma, x[i])
+            functionValues.append(lorentzian_profile(xContinuous)*fx[i])
 
-    funcs = []
-    if type == "L":
-        for i in range(n):
-            fi = lorentzian(gam, x[i])
-            funcs.append(fi(x_cont)*fx[i])
+    elif typeOfFunction == "G":
+        for i in range(lenFx):
+            gaussian_profile = gaussian(alpha, x[i])
+            functionValues.append(gaussian_profile(xContinuous)*fx[i])
 
-    elif type == "G":
-        for i in range(n):
-            fi = gaussian(alph, x[i])
-            funcs.append(fi(x_cont)*fx[i])
+    elif typeOfFunction == "V":
+        for i in range(lenFx):
+            voigt_profile = voigt(gamma, alpha, x[i])
+            functionValues.append(voigt_profile(xContinuous)*fx[i])
 
-    elif type == "V":
-        for i in range(n):
-            fi = voigt(gam, alph, x[i])
-            funcs.append(fi(x_cont)*fx[i])
-        
+    sumOfConvolutions = np.sum(functionValues, axis=0)
 
-    sum_funcs = np.zeros(np_)
-    for i in range(n):
-         sum_funcs = np.sum([sum_funcs, funcs[i]], axis=0)
-    
-    return sum_funcs
-
-
-def integrate (f, grid):
-    return np.trapz(f, x=grid, dx=grid[1]-grid[0])
+    return sumOfConvolutions
